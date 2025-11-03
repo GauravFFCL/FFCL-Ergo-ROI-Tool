@@ -1,0 +1,851 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ergonomics ROI Calculator | Fresh Frontiers</title>
+    
+    <!-- FIX: Load Tailwind CSS CDN first to define the 'tailwind' object -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+    <!-- Load Lucide icons for visual elements -->
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    
+    <!-- Tailwind Configuration with Custom Colors (Now runs after the library is loaded) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'fresh-primary': {
+                            600: '#0072ce', // Primary Blue
+                            700: '#005bb5', // Darker Primary for hover
+                            50:  '#e6f2fd', // Light Primary for borders
+                        },
+                        'fresh-secondary': {
+                            500: '#22a96a', // Secondary Green
+                            600: '#1a8453', // Darker Secondary
+                            700: '#156d44', // Even darker Secondary for CTA
+                            50:  '#eaf6f1', // Light Secondary background
+                        },
+                        'fresh-light': '#f2f2f2', // Accent/Background Gray
+                    },
+                    fontFamily: {
+                        // Using the default sans-serif stack which includes Helvetica/Arial
+                        sans: ['Arial', 'Helvetica', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        /* Apply smooth scrolling and default font */
+        html { scroll-behavior: smooth; font-family: 'Arial', 'Helvetica', sans-serif; }
+        
+        /* --- Tooltip Styles for Metric Definitions --- */
+        .tooltip-container { position: relative; }
+        .tooltip-trigger {
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+        }
+        .tooltip-content {
+            visibility: hidden;
+            opacity: 0;
+            background-color: #333333; /* Dark background */
+            color: white;
+            padding: 8px 12px;
+            border-radius: 8px;
+            position: absolute;
+            z-index: 50;
+            bottom: 100%; /* Position above the trigger */
+            left: 50%;
+            transform: translateX(-50%) translateY(-10px);
+            width: 250px;
+            text-align: left;
+            font-size: 0.875rem;
+            line-height: 1.4;
+            transition: opacity 0.3s, visibility 0.3s, transform 0.3s;
+            pointer-events: none;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+        }
+        /* Triangle indicator (matches tooltip background) */
+        .tooltip-content::after {
+            content: "";
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            margin-left: -5px;
+            border-width: 5px;
+            border-style: solid;
+            border-color: #333333 transparent transparent transparent;
+        }
+
+        /* Show tooltip on hover/focus on the container */
+        .tooltip-container:hover .tooltip-content,
+        .tooltip-container:focus-within .tooltip-content {
+            visibility: visible;
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+        /* --- End Tooltip Styles --- */
+
+        /* Custom styles for the Print/PDF export feature */
+        @media print {
+          body {
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+          }
+          .no-print {
+            display: none !important;
+          }
+          .print-container {
+            max-width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            box-shadow: none !important;
+            border: none !important;
+            background: #ffffff !important;
+          }
+          .print-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+          }
+          .print-full-width {
+            grid-column: 1 / -1;
+          }
+          .print-header, .print-cta, .print-disclaimer {
+            text-align: center;
+          }
+          .print-cta {
+            background: #e6f2fd; /* Light Primary */
+            padding: 1rem;
+            border-radius: 8px;
+          }
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-white via-fresh-light to-fresh-light p-4 md:p-8">
+    <div class="max-w-6xl mx-auto" id="print-area">
+        
+        <!-- Main Title Section (Adjusted margin since header is removed) -->
+        <div class="text-center mb-8 pt-4 print-header">
+            <div class="flex items-center justify-center gap-3 mb-4">
+                <!-- Calculator Icon (Primary Blue Branding) -->
+                <span data-lucide="calculator" class="w-12 h-12 text-fresh-primary-600"></span>
+                <h1 class="text-4xl md:text-5xl font-bold text-gray-800">
+                    Ergonomics ROI Calculator
+                </h1>
+            </div>
+            <!-- Subtitle is now explicit about Ergonomics Assessment -->
+            <p class="text-xl text-gray-600 max-w-3xl mx-auto">
+                Estimate your savings and return on investment from a <span class="font-bold text-fresh-primary-700">Fresh Frontiers Ergonomics Assessment.</span>
+            </p>
+        </div>
+        
+        <div class="grid md:grid-cols-2 gap-6 mb-8 print-grid">
+            <!-- Input Section -->
+            <div class="bg-white rounded-2xl shadow-xl p-6 border border-gray-100 print-container" id="input-section">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2 no-print">
+                    <!-- Users Icon -->
+                    <span data-lucide="users" class="w-6 h-6 text-fresh-primary-600"></span>
+                    Your Workplace Information
+                </h2>
+                
+                <div class="space-y-5">
+                    <!-- Industry Benchmark -->
+                    <div>
+                        <label for="industry" class="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-1.5">
+                            <!-- Building Icon -->
+                            <span data-lucide="building" class="w-4 h-4"></span>
+                            Industry Sector
+                        </label>
+                        <!-- Focus border updated to Primary Blue -->
+                        <select id="industry" onchange="handleIndustryChange(this.value); calculateAndDisplayResults();" class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-fresh-primary-600 focus:outline-none text-lg bg-white">
+                            <!-- Options added by JS -->
+                        </select>
+                    </div>
+
+                    <!-- Employee and Salary Inputs -->
+                    <label-input label="Number of Employees" id="employees" type="number" value="51" min="1"></label-input>
+                    <label-input label="Average Annual Salary ($)" id="avgSalary" type="number" value="55000" min="0"></label-input>
+                    
+                    <!-- Injury Rate (Disabled when not custom) -->
+                    <div>
+                        <label for="currentInjuryRate" class="block text-sm font-semibold text-gray-700 mb-2">
+                            Current Annual Injury Rate (%)
+                        </label>
+                        <!-- Focus border updated to Primary Blue -->
+                        <input id="currentInjuryRate" type="number" value="5" oninput="handleInputChange(this)" class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-fresh-primary-600 focus:outline-none text-lg" min="0" max="100" step="0.1">
+                        <p class="text-xs text-gray-500 mt-1" id="rate-hint"></p>
+                    </div>
+
+                    <!-- Claim Cost (Disabled when not custom) -->
+                    <div>
+                        <label for="avgClaimCost" class="block text-sm font-semibold text-gray-700 mb-2">
+                            Average WorkSafeBC Claim Cost ($)
+                        </label>
+                        <!-- Focus border updated to Primary Blue -->
+                        <input id="avgClaimCost" type="number" value="15000" oninput="handleInputChange(this)" class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-fresh-primary-600 focus:outline-none text-lg" min="0">
+                        <p class="text-xs text-gray-500 mt-1" id="cost-hint"></p>
+                    </div>
+
+                    <label-input label="Lost Productivity Days per Injury" id="lostProductivityDays" type="number" value="15" min="0"></label-input>
+
+                    <!-- Investment Inputs (Light Primary Background) -->
+                    <div class="bg-fresh-primary-50 p-4 rounded-lg border border-fresh-primary-50">
+                        <h3 class="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2">
+                            <!-- Dollar Sign Icon (Primary Blue) -->
+                            <span data-lucide="dollar-sign" class="w-5 h-5 text-fresh-primary-600"></span>
+                            Investment Costs
+                        </h3>
+                        <div class="space-y-4">
+                            <label-input label="One-Time Assessment Cost ($)" id="assessmentCost" type="number" value="3000" min="0"></label-input>
+                            <div>
+                                <label for="equipmentCost" class="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-1.5">
+                                    <!-- Wrench Icon -->
+                                    <span data-lucide="wrench" class="w-4 h-4"></span>
+                                    One-Time New Equipment Cost ($)
+                                </label>
+                                <!-- Focus border updated to Primary Blue -->
+                                <input id="equipmentCost" type="number" value="5000" oninput="handleInputChange(this)" class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-fresh-primary-600 focus:outline-none text-lg" min="0">
+                            </div>
+                            <div>
+                                <label for="annualProgramCost" class="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-1.5">
+                                    <!-- Calendar Icon -->
+                                    <span data-lucide="calendar" class="w-4 h-4"></span>
+                                    Ongoing Annual Program Cost ($)
+                                </label>
+                                <!-- Focus border updated to Primary Blue -->
+                                <input id="annualProgramCost" type="number" value="1000" oninput="handleInputChange(this)" class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-fresh-primary-600 focus:outline-none text-lg" min="0">
+                                <p class="text-xs text-gray-500 mt-1">e.g., training, admin, equipment maintenance</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Reduction Rate Slider (Light Secondary Background) -->
+                    <div class="bg-fresh-secondary-50 p-4 rounded-lg border border-fresh-secondary-50">
+                        <label for="injuryReductionRate" class="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-1.5">
+                            <!-- Sliders Icon (Secondary Green) -->
+                            <span data-lucide="sliders" class="w-4 h-4 text-fresh-secondary-500"></span>
+                            Projected Injury Reduction Rate
+                        </label>
+                        <div class="flex items-center gap-4">
+                            <!-- Slider thumb and track colors use Secondary Green -->
+                            <input id="injuryReductionRate" type="range" value="35" oninput="updateSlider(this); calculateAndDisplayResults();" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:bg-fresh-secondary-500 [&::-moz-range-thumb]:bg-fresh-secondary-500" min="0" max="100" step="1">
+                            <span class="text-xl font-bold text-fresh-secondary-600 w-20 text-right" id="reduction-rate-display">35%</span>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-1">Industry average is 30-40%</p>
+                    </div>
+                </div>
+
+                <!-- Update CTA to use new colors (Gradient from Primary Blue to Secondary Green) -->
+                <button onclick="calculateAndDisplayResults()" class="w-full mt-6 bg-gradient-to-r from-fresh-primary-600 to-fresh-secondary-500 text-white py-4 rounded-xl font-bold text-lg hover:from-fresh-primary-700 hover:to-fresh-secondary-600 transition-all shadow-lg hover:shadow-xl no-print">
+                    Calculate Your ROI
+                </button>
+            </div>
+
+            <!-- Results Section (Background gradient now uses Light Primary and Secondary blend for better visibility) -->
+            <div class="bg-gradient-to-br from-fresh-primary-50 to-fresh-secondary-50 rounded-2xl shadow-xl p-6 border-2 border-fresh-secondary-500 print-container" id="results-section">
+                <!-- Content will be injected here -->
+                <div class="flex flex-col items-center justify-center h-full text-center">
+                    <!-- Calculator Icon (Placeholder) -->
+                    <span data-lucide="calculator" class="w-20 h-20 text-gray-300 mb-4"></span>
+                    <p class="text-gray-500 text-lg">
+                        Enter your information and click<br />"Calculate Your ROI" to see results
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Call to Action (Updated for Fresh Frontiers Branding) -->
+        <div id="cta-section" class="hidden bg-gradient-to-r from-fresh-primary-700 to-fresh-secondary-700 rounded-2xl shadow-2xl p-8 text-white text-center print-full-width print-cta">
+            <h3 class="text-3xl font-bold mb-4">Ready to Achieve These Savings?</h3>
+            <p class="text-xl mb-6 text-fresh-primary-50 max-w-3xl mx-auto">
+                Contact Fresh Frontiers Consultancy Ltd. today to discuss a tailored ergonomics strategy that delivers real ROI.
+            </p>
+            <div class="flex justify-center no-print">
+                <!-- Mailto Link for Fresh Frontiers -->
+                <a href="mailto:info@freshfrontiers.org" class="bg-white text-gray-800 px-8 py-4 rounded-xl font-bold text-lg hover:bg-gray-100 transition-all shadow-lg inline-block flex items-center gap-2">
+                    <span data-lucide="mail" class="w-5 h-5 text-fresh-primary-600"></span>
+                    Email: info@freshfrontiers.org
+                </a>
+            </div>
+            <div class="hidden print-show text-lg font-medium text-fresh-primary-50">
+                <p>Contact Fresh Frontiers Consultancy Ltd. at info@freshfrontiers.org to start your consultation.</p>
+            </div>
+        </div>
+
+        <!-- Disclaimer & Website Link Section (Updated) -->
+        <div class="mt-8 text-center text-sm text-gray-500 max-w-4xl mx-auto print-full-width print-disclaimer">
+            <p>
+                **Tool Disclaimer:** This calculator is provided for illustrative and estimation purposes only. All calculations are based on user-provided inputs and **estimated industry benchmarks derived from general WorkSafeBC categories**. Actual results will vary based on your organization's specific WorkSafeBC Classification Unit, annual rate changes, and the quality of implementation. This tool was designed and developed by **Fresh Frontiers Consultancy Ltd.**
+            </p>
+            <p class="mt-2">
+                * Please check the fields outlined in red borders and ensure a positive number is entered in each required field.
+            </p>
+            
+            <!-- Link updated to reference ALL services -->
+            <p class="mt-4 text-base font-semibold text-gray-700">
+                Learn more about our full range of professional services and schedule a consultation by visiting <a href="http://www.freshfrontiers.org" target="_blank" class="text-fresh-primary-600 hover:text-fresh-primary-700 underline transition-colors">www.freshfrontiers.org</a>.
+            </p>
+        </div>
+    </div>
+
+    <script>
+        // --- Constants ---
+        const AVG_WORKING_DAYS_PER_YEAR = 260;
+        let chartInstance = null; // To hold the Chart.js instance
+
+        // The following BENCHMARK_DATA provides ESTIMATED averages based on broad WorkSafeBC industry categories.
+        const BENCHMARK_DATA = {
+            office: { label: "Office & Admin Services", rate: 1.5, cost: 12000 },
+            retail: { label: "Retail & Wholesale", rate: 2.2, cost: 10000 },
+            manufacturing: { label: "Manufacturing & Processing", rate: 5.5, cost: 20000 },
+            construction: { label: "Construction", rate: 7.1, cost: 22000 },
+            transportation: { label: "Transportation & Warehousing", rate: 8.5, cost: 25000 },
+            healthcare: { label: "Health & Social Services", rate: 6.8, cost: 18000 },
+            hospitality: { label: "Accommodation & Food Services", rate: 4.5, cost: 14000 },
+            recreation: { label: "Culture, Recreation, & Personal Services (Includes Arts & Ent.)", rate: 3.5, cost: 14000 }, 
+            public: { label: "Public Administration", rate: 3.5, cost: 16000 },
+            naturalresources: { label: "Natural Resources (Forestry/Mining)", rate: 9.0, cost: 30000 },
+            utilities: { label: "Utilities & Communication", rate: 4.0, cost: 17000 },
+            education: { label: "Education Services", rate: 2.5, cost: 11000 },
+            custom: { label: "Custom / Other", rate: 5, cost: 15000 }
+        };
+
+        const defaultInputs = {
+            employees: 51, avgSalary: 55000, currentInjuryRate: 5, avgClaimCost: 15000,
+            lostProductivityDays: 15, assessmentCost: 3000, equipmentCost: 5000,
+            annualProgramCost: 1000, injuryReductionRate: 35, industry: 'office'
+        };
+
+        // Custom element to simplify input field creation
+        class LabelInput extends HTMLElement {
+            connectedCallback() {
+                const label = this.getAttribute('label');
+                const id = this.getAttribute('id');
+                const type = this.getAttribute('type') || 'text';
+                const value = this.getAttribute('value') || '';
+                const min = this.getAttribute('min') || '';
+
+                this.innerHTML = `
+                    <div>
+                        <label for="${id}" class="block text-sm font-semibold text-gray-700 mb-2">${label}</label>
+                        <!-- Focus border updated to Primary Blue -->
+                        <input id="${id}" type="${type}" value="${value}" oninput="handleInputChange(this)" class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-fresh-primary-600 focus:outline-none text-lg" min="${min}">
+                    </div>
+                `;
+            }
+        }
+        customElements.define('label-input', LabelInput);
+
+
+        // --- Icon Rendering ---
+        function renderIcons() {
+            if (typeof lucide === 'undefined' || !lucide.icons) {
+                console.error("Lucide icons library not loaded.");
+                return;
+            }
+            document.querySelectorAll('[data-lucide]').forEach(element => {
+                const iconName = element.getAttribute('data-lucide');
+                const classes = element.className;
+                
+                const attributes = { class: classes };
+                
+                const svg = lucide.icons[iconName];
+                if (svg) {
+                    element.innerHTML = svg.toSvg(attributes);
+                    element.removeAttribute('data-lucide');
+                } else {
+                    console.warn(`Icon not found: ${iconName}`);
+                }
+            });
+        }
+        
+        // Helper function for dynamic icon injection in generated HTML
+        function getIconSvg(name, classes) {
+            if (typeof lucide === 'undefined' || !lucide.icons[name]) return '';
+            const svg = lucide.icons[name]?.toSvg({ class: classes });
+            return svg || '';
+        }
+
+        // --- Initialization and URL Handling ---
+        window.onload = function() {
+            renderIcons(); // Inject static icons now that lucide.js and DOM are ready
+
+            // Populate the Industry dropdown
+            const industrySelect = document.getElementById('industry');
+            industrySelect.innerHTML = ''; 
+            for (const key in BENCHMARK_DATA) {
+                const option = document.createElement('option');
+                option.value = key;
+                option.textContent = BENCHMARK_DATA[key].label;
+                industrySelect.appendChild(option);
+            }
+            industrySelect.value = defaultInputs.industry;
+
+            // Load values from URL parameters if available
+            const params = new URLSearchParams(window.location.search);
+            for (const key in defaultInputs) {
+                const value = params.get(key);
+                if (value !== null) {
+                    const inputElement = document.getElementById(key);
+                    if (inputElement) {
+                        if (key === 'injuryReductionRate') {
+                            document.getElementById('reduction-rate-display').textContent = `${value}%`;
+                        }
+                        inputElement.value = value;
+                    }
+                }
+            }
+            
+            // --- CRITICAL FIX: Ensure required inputs have values on initial load ---
+            const requiredFields = ['employees', 'avgSalary', 'currentInjuryRate'];
+            requiredFields.forEach(key => {
+                const inputElement = document.getElementById(key);
+                if (inputElement && (!inputElement.value || parseFloat(inputElement.value) === 0)) {
+                    inputElement.value = defaultInputs[key];
+                }
+            });
+            // ------------------------------------------------------------------------
+
+            // Set initial industry state and calculate results
+            const industry = document.getElementById('industry').value;
+            handleIndustryChange(industry, false); 
+            calculateAndDisplayResults(); 
+        }
+
+
+        // --- Event Handlers ---
+        function getInputs() {
+            const inputs = {};
+            for (const key in defaultInputs) {
+                const element = document.getElementById(key);
+                if (element) {
+                    const value = element.value;
+                    if (typeof defaultInputs[key] === 'number') {
+                        inputs[key] = parseFloat(value) || 0; 
+                    } else {
+                        inputs[key] = value;
+                    }
+                }
+            }
+            return inputs;
+        }
+
+        function handleInputChange(element) {
+            if (element.type === 'number') {
+                const val = parseFloat(element.value);
+                if (isNaN(val) || val < 0) {
+                    document.getElementById('cta-section').classList.add('hidden');
+                }
+            }
+            calculateAndDisplayResults();
+        }
+
+        function updateSlider(element) {
+            document.getElementById('reduction-rate-display').textContent = `${element.value}%`;
+        }
+
+        function handleIndustryChange(industry) {
+            const industryData = BENCHMARK_DATA[industry];
+            const rateInput = document.getElementById('currentInjuryRate');
+            const costInput = document.getElementById('avgClaimCost');
+            const rateHint = document.getElementById('rate-hint');
+            const costHint = document.getElementById('cost-hint');
+
+            if (industry !== 'custom') {
+                rateInput.value = industryData.rate;
+                rateInput.disabled = true;
+                rateInput.classList.add('bg-gray-100');
+                rateHint.textContent = `Set to ${industryData.label} estimated average. Select 'Custom' to edit.`;
+
+                costInput.value = industryData.cost;
+                costInput.disabled = true;
+                costInput.classList.add('bg-gray-100');
+                costHint.textContent = `Set to ${industryData.label} estimated average. Select 'Custom' to edit.`;
+            } else {
+                rateInput.disabled = false;
+                rateInput.classList.remove('bg-gray-100');
+                rateInput.classList.remove('bg-gray-100');
+                rateHint.textContent = '';
+
+                costInput.disabled = false;
+                costInput.classList.remove('bg-gray-100');
+                costHint.textContent = '';
+            }
+             calculateAndDisplayResults();
+        }
+        
+        // Helper function for visual validation feedback
+        function applyValidationStyle(id, isValid) {
+            const inputElement = document.getElementById(id);
+            if (inputElement) {
+                if (isValid) {
+                    inputElement.classList.remove('border-red-500', 'border-4');
+                    inputElement.classList.add('border-gray-200', 'border-2');
+                } else {
+                    inputElement.classList.add('border-red-500', 'border-4');
+                    inputElement.classList.remove('border-gray-200', 'border-2');
+                }
+            }
+        }
+
+
+        // --- Core Logic ---
+        function calculateROI(inputs) {
+            // Current annual costs
+            const injuriesPerYear = (inputs.employees * inputs.currentInjuryRate) / 100;
+            const directClaimCosts = injuriesPerYear * inputs.avgClaimCost;
+            const dailyWage = inputs.avgSalary / AVG_WORKING_DAYS_PER_YEAR;
+            const indirectCosts = injuriesPerYear * inputs.lostProductivityDays * dailyWage;
+            const currentAnnualCost = directClaimCosts + indirectCosts;
+
+            // After ergonomic intervention
+            const reductionRate = inputs.injuryReductionRate / 100;
+            const newInjuryRate = inputs.currentInjuryRate * (1 - reductionRate);
+            const newInjuriesPerYear = (inputs.employees * newInjuryRate) / 100;
+            const newDirectCosts = newInjuriesPerYear * inputs.avgClaimCost;
+            const newIndirectCosts = newInjuriesPerYear * inputs.lostProductivityDays * dailyWage;
+
+            // Includes ongoing program costs
+            const newAnnualCostWithProgram = newDirectCosts + newIndirectCosts + inputs.annualProgramCost;
+
+            // Savings and ROI
+            const oneTimeInvestment = inputs.assessmentCost + inputs.equipmentCost;
+            const annualGrossSavings = currentAnnualCost - newAnnualCostWithProgram;
+
+            // Handle division by zero edge cases
+            const roi = oneTimeInvestment > 0 ? ((annualGrossSavings - oneTimeInvestment) / oneTimeInvestment) * 100 : Infinity;
+            const paybackMonths = annualGrossSavings > 0 ? (oneTimeInvestment / annualGrossSavings) * 12 : Infinity;
+            
+            // Year 2 & 3 Savings (Annual Gross Savings * 2)
+            const subsequentYearsSavings = annualGrossSavings * 2;
+            const threeYearNetSavings = (annualGrossSavings * 3) - oneTimeInvestment;
+
+
+            return {
+                currentAnnualCost: Math.round(currentAnnualCost),
+                newAnnualCost: Math.round(newAnnualCostWithProgram),
+                annualSavings: Math.round(annualGrossSavings),
+                roi: isFinite(roi) ? Math.round(roi) : 'N/A (No Investment)',
+                paybackMonths: isFinite(paybackMonths) ? paybackMonths.toFixed(1) : 'N/A (No Savings)',
+                threeYearSavings: Math.round(threeYearNetSavings), 
+                injuriesPerYear: injuriesPerYear.toFixed(1),
+                newInjuriesPerYear: newInjuriesPerYear.toFixed(1),
+                injuriesPrevented: (injuriesPerYear - newInjuriesPerYear).toFixed(1),
+                oneTimeInvestment: Math.round(oneTimeInvestment),
+                reductionRate: inputs.injuryReductionRate
+            };
+        }
+
+        function calculateAndDisplayResults() {
+            const inputs = getInputs();
+            let isValid = true;
+
+            // 1. Employee Count Check
+            if (inputs.employees <= 0) {
+                applyValidationStyle('employees', false);
+                isValid = false;
+            } else {
+                applyValidationStyle('employees', true);
+            }
+
+            // 2. Average Salary Check
+            if (inputs.avgSalary <= 0) {
+                applyValidationStyle('avgSalary', false);
+                isValid = false;
+            } else {
+                applyValidationStyle('avgSalary', true);
+            }
+
+            // 3. Current Injury Rate Check
+            if (inputs.currentInjuryRate <= 0) {
+                applyValidationStyle('currentInjuryRate', false);
+                isValid = false;
+            } else {
+                applyValidationStyle('currentInjuryRate', true);
+            }
+
+
+            // Validation check to prevent calculation with crucial zero/invalid inputs
+            if (!isValid) {
+                document.getElementById('cta-section').classList.add('hidden');
+                document.getElementById('results-section').innerHTML = `
+                    <div class="flex flex-col items-center justify-center h-full text-center p-8 bg-white rounded-xl shadow-inner border border-red-200">
+                        ${getIconSvg('alert-triangle', 'w-12 h-12 text-red-500 mb-4')}
+                        <p class="text-gray-700 text-xl font-semibold">
+                            Missing or Invalid Data
+                        </p>
+                        <p class="text-gray-500 mt-2">
+                            Please check the fields outlined in **thick red borders** and enter a positive number:
+                            <ul class="list-disc list-inside mt-3 text-left w-max mx-auto font-medium">
+                                <li>**Number of Employees**</li>
+                                <li>**Average Annual Salary ($)**</li>
+                                <li>**Current Annual Injury Rate (%)**</li>
+                            </ul>
+                        </p>
+                    </div>
+                `;
+                if (chartInstance) chartInstance.destroy();
+                return;
+            }
+
+            const results = calculateROI(inputs);
+            
+            // Definitions for tooltips
+            const definitions = {
+                annualSavings: "The total amount saved annually by reducing injury costs and lost workdays, minus the yearly program maintenance cost.",
+                roi: "The return percentage you achieve on your initial one-time investment (assessment and equipment) achieved in the first year.",
+                paybackMonths: "The time (in months) required for your annual savings to fully recover the initial, one-time investment.",
+                threeYearSavings: "The total net profit after three years, calculated as 3 years of gross savings minus the initial one-time investment."
+            };
+
+            const resultHTML = `
+                <div>
+                    <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                        ${getIconSvg('trending-up', 'w-6 h-6 text-fresh-secondary-500')}
+                        Your Potential Financial Impact
+                    </h2>
+                    <!-- Key Metrics -->
+                    <div class="grid grid-cols-2 gap-4 mb-6">
+                        <!-- Annual Gross Savings (Secondary Green Accent) -->
+                        <div class="bg-white rounded-xl p-4 shadow-md border-l-4 border-fresh-secondary-500 tooltip-container">
+                            <span class="text-gray-600 font-medium block text-sm flex items-center justify-between">
+                                Annual Gross Savings
+                                <span class="tooltip-trigger">
+                                    ${getIconSvg('help-circle', 'w-4 h-4 text-gray-400 hover:text-fresh-secondary-500')}
+                                </span>
+                                <div class="tooltip-content">${definitions.annualSavings}</div>
+                            </span>
+                            <span class="text-2xl font-bold text-fresh-secondary-600">
+                                $${results.annualSavings.toLocaleString()}
+                            </span>
+                        </div>
+                        
+                        <!-- Year 1 ROI (Primary Blue Accent) -->
+                        <div class="bg-white rounded-xl p-4 shadow-md border-l-4 border-fresh-primary-600 tooltip-container">
+                            <span class="text-gray-600 font-medium block text-sm flex items-center justify-between">
+                                Year 1 ROI
+                                <span class="tooltip-trigger">
+                                    ${getIconSvg('help-circle', 'w-4 h-4 text-gray-400 hover:text-fresh-primary-600')}
+                                </span>
+                                <div class="tooltip-content">${definitions.roi}</div>
+                            </span>
+                            <span class="text-2xl font-bold text-fresh-primary-600">
+                                ${results.roi}%
+                            </span>
+                        </div>
+
+                        <!-- Payback Period (Neutral/Slate Accent) -->
+                        <div class="bg-white rounded-xl p-4 shadow-md border-l-4 border-gray-500 tooltip-container">
+                            <span class="text-gray-600 font-medium block text-sm flex items-center justify-between">
+                                Payback Period
+                                <span class="tooltip-trigger">
+                                    ${getIconSvg('help-circle', 'w-4 h-4 text-gray-400 hover:text-gray-500')}
+                                </span>
+                                <div class="tooltip-content">${definitions.paybackMonths}</div>
+                            </span>
+                            <span class="text-2xl font-bold text-gray-700">
+                                ${results.paybackMonths} <span class="text-base">months</span>
+                            </span>
+                        </div>
+                        
+                        <!-- 3-Year Net Savings (Orange Accent for long-term value) -->
+                        <div class="bg-white rounded-xl p-4 shadow-md border-l-4 border-orange-500 tooltip-container">
+                            <span class="text-gray-600 font-medium block text-sm flex items-center justify-between">
+                                3-Year Net Savings
+                                <span class="tooltip-trigger">
+                                    ${getIconSvg('help-circle', 'w-4 h-4 text-gray-400 hover:text-orange-500')}
+                                </span>
+                                <div class="tooltip-content">${definitions.threeYearSavings}</div>
+                            </span>
+                            <span class="text-2xl font-bold text-orange-600">
+                                $${results.threeYearSavings.toLocaleString()}
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Chart -->
+                    <div class="bg-white rounded-xl p-5 shadow-md mb-6">
+                        <h3 class="font-bold text-gray-800 mb-3 flex items-center gap-2">
+                            ${getIconSvg('bar-chart-3', 'w-5 h-5 text-fresh-primary-600')}
+                            Annual Cost Comparison (with ${results.reductionRate}% reduction)
+                        </h3>
+                        <div style="width: 100%; height: 250px;">
+                            <canvas id="costChart"></canvas>
+                        </div>
+                        <div class="space-y-2 text-sm mt-4">
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Current annual injury costs:</span>
+                                <span class="font-semibold text-red-600">$${results.currentAnnualCost.toLocaleString()}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Projected annual costs (incl. program):</span>
+                                <span class="font-semibold text-fresh-secondary-600">$${results.newAnnualCost.toLocaleString()}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Injury Reduction -->
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="bg-white rounded-xl p-5 shadow-md">
+                            <h3 class="font-bold text-gray-800 mb-3 flex items-center gap-2">
+                                ${getIconSvg('alert-circle', 'w-5 h-5 text-red-500')}
+                                Injury Impact
+                            </h3>
+                            <div class="space-y-2 text-sm">
+                                <div class="flex justify-between">
+                                    <span class="text-gray-600">Current (yr):</span>
+                                    <span class="font-semibold text-red-600">${results.injuriesPerYear}</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-600">Projected (yr):</span>
+                                    <span class="font-semibold text-fresh-secondary-600">${results.newInjuriesPerYear}</span>
+                                </div>
+                                <div class="flex justify-between pt-2 border-t">
+                                    <span class="text-gray-800 font-bold">Prevented (yr):</span>
+                                    <span class="font-bold text-fresh-secondary-600">${results.injuriesPrevented}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Investment Summary -->
+                        <div class="bg-white rounded-xl p-5 shadow-md">
+                            <h3 class="font-bold text-gray-800 mb-3 flex items-center gap-2">
+                                ${getIconSvg('dollar-sign', 'w-5 h-5 text-fresh-primary-600')}
+                                Investment
+                            </h3>
+                            <div class="space-y-2 text-sm">
+                                <div class="flex justify-between">
+                                    <span class="text-gray-600">One-Time Cost:</span>
+                                    <span class="font-semibold text-fresh-primary-600">$${results.oneTimeInvestment.toLocaleString()}</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-600">Annual Program:</span>
+                                    <span class="font-semibold text-fresh-primary-600">$${inputs.annualProgramCost.toLocaleString()}</span>
+                                </div>
+                                <div class="flex justify-between pt-2 border-t">
+                                    <span class="text-gray-800 font-bold">Total (Year 1):</span>
+                                    <span class="font-bold text-fresh-primary-600">$${(results.oneTimeInvestment + inputs.annualProgramCost).toLocaleString()}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="flex gap-4 mt-6 no-print">
+                        <button onclick="handlePrint()" class="flex-1 bg-gray-600 text-white px-6 py-3 rounded-xl font-bold text-lg hover:bg-gray-700 transition-all shadow-lg inline-flex items-center justify-center gap-2">
+                            ${getIconSvg('printer', 'w-5 h-5')}
+                            Print Report
+                        </button>
+                        <button onclick="handleShare()" class="flex-1 bg-purple-600 text-white px-6 py-3 rounded-xl font-bold text-lg hover:bg-purple-700 transition-all shadow-lg inline-flex items-center justify-center gap-2">
+                            ${getIconSvg('share-2', 'w-5 h-5')}
+                            Share Results
+                        </button>
+                    </div>
+                    <p class="text-center text-purple-700 font-medium mt-3 no-print" id="share-message"></p>
+                </div>
+            `;
+            document.getElementById('results-section').innerHTML = resultHTML;
+            document.getElementById('cta-section').classList.remove('hidden');
+
+            // Render the chart
+            renderChart(results);
+        }
+
+        function renderChart(results) {
+            const ctx = document.getElementById('costChart').getContext('2d');
+            
+            // Destroy previous chart instance if it exists
+            if (chartInstance) {
+                chartInstance.destroy();
+            }
+
+            chartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Current', 'Projected (Annual)'],
+                    datasets: [{
+                        label: 'Annual Injury Costs',
+                        data: [results.currentAnnualCost, results.newAnnualCost],
+                        // Updated Chart Colors: Red for Current, Secondary Green for Projected
+                        backgroundColor: ['#ef4444', '#22a96a'], 
+                        borderRadius: 6,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    if (context.parsed.y !== null) {
+                                        label += new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(context.parsed.y);
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: { display: true, text: 'Cost ($)' },
+                            ticks: {
+                                callback: function(value) {
+                                    if (value >= 1000) return '$' + (value / 1000) + 'K';
+                                    return '$' + value;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        // --- Utility Functions ---
+        function handlePrint() {
+            window.print();
+        }
+
+        function handleShare() {
+            const inputs = getInputs();
+            const params = new URLSearchParams();
+            for (const key in inputs) {
+                const inputElement = document.getElementById(key);
+                if (inputElement && inputElement.value !== defaultInputs[key].toString()) {
+                     params.append(key, inputElement.value);
+                } else if (inputElement && key === 'industry') {
+                    params.append(key, inputElement.value);
+                }
+            }
+            
+            const link = `${window.location.origin}${window.location.pathname}?${params.toString()}`;
+            
+            // Use execCommand for broader compatibility in iFrames
+            try {
+              const dummy = document.createElement('textarea');
+              document.body.appendChild(dummy);
+              dummy.value = link;
+              dummy.select();
+              document.execCommand('copy');
+              document.body.removeChild(dummy);
+              document.getElementById('share-message').textContent = 'Link copied to clipboard!';
+            } catch (err) {
+              document.getElementById('share-message').textContent = 'Failed to copy link.';
+              console.error('Failed to copy: ', err);
+            }
+        }
+    </script>
+</body>
+</html>
